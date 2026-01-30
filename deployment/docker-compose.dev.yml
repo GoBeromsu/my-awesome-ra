@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  ra-api:
+    build:
+      context: ../apps/api
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - UPSTAGE_API_KEY=${UPSTAGE_API_KEY}
+      - VECTOR_STORE_PATH=/data/faiss
+      - DATABASE_PATH=/data/my_awesome_ra.db
+      - LOG_LEVEL=DEBUG
+    volumes:
+      - ../apps/api/src:/app/src:ro
+      - ../data:/data
+    command: ["uv", "run", "uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    networks:
+      - dev-network
+
+networks:
+  dev-network:
+    driver: bridge
