@@ -48,11 +48,14 @@ async def search_evidence(
                     text=r["text"],
                     page=r.get("page"),
                     score=r["score"],
-                    title=r.get("metadata", {}).get("title"),
-                    authors=r.get("metadata", {}).get("authors"),
-                    year=r.get("metadata", {}).get("year"),
-                    source_pdf=r.get("metadata", {}).get("source_pdf"),
-                    metadata=r.get("metadata", {}),
+                    title=r.get("title"),
+                    authors=r.get("authors"),
+                    year=r.get("year"),
+                    source_pdf=r.get("source_pdf"),
+                    metadata={
+                        k: v for k, v in r.items()
+                        if k not in ("document_id", "chunk_id", "text", "score", "start_idx", "end_idx")
+                    },
                 )
                 for r in results
             ],

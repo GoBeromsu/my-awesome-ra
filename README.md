@@ -1,40 +1,107 @@
 # My Awesome RA
 
-AI Agent service for reference-grounded LaTeX paper writing.
+> **AI Agent for Reference-Grounded LaTeX Paper Writing**
+> Powered by [Upstage SOLAR API](https://console.upstage.ai/)
 
-Evidence Panel overlay for Overleaf CE that provides semantic search across your reference PDFs, powered by Upstage SOLAR API.
+논문 작성 시 현재 문단에 맞는 참고문헌 근거를 자동으로 찾아주는 Evidence Panel을 Overleaf CE에 통합한 프로젝트입니다.
+
+## Features
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| **Evidence Search** | 현재 문단 기반 관련 근거 자동 검색 | ✅ API 완료 |
+| **Document Parse** | PDF → 텍스트 추출 (SOLAR Document Parse) | ✅ API 완료 |
+| **Vector Index** | FAISS 기반 시맨틱 검색 | ✅ 완료 |
+| **Evidence Panel UI** | Overleaf 우측 패널 | ✅ 코드 완료 |
+| **Paragraph Detection** | CodeMirror 커서 위치 추적 | ✅ 코드 완료 |
+| **Overleaf Integration** | 커스텀 Overleaf 빌드 | 🔄 진행 중 |
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        Overleaf CE                          │
+│  ┌──────────────────┐    ┌────────────────────────────┐    │
+│  │   LaTeX Editor   │    │     Evidence Panel         │    │
+│  │  (CodeMirror)    │───▶│  - Auto/Manual Search      │    │
+│  │                  │    │  - Results Display         │    │
+│  └──────────────────┘    └────────────────────────────┘    │
+└─────────────────────────────────────────────────────────────┘
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    FastAPI Backend                          │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
+│  │   /evidence  │  │  /documents  │  │  /citations  │      │
+│  │    /search   │  │    /parse    │  │   /extract   │      │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘      │
+│         │                 │                 │               │
+│         ▼                 ▼                 ▼               │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │              Upstage SOLAR API                      │   │
+│  │  • Embedding (solar-embedding-1-large-query)        │   │
+│  │  • Document Parse                                   │   │
+│  │  • Information Extraction                           │   │
+│  └─────────────────────────────────────────────────────┘   │
+│         │                                                   │
+│         ▼                                                   │
+│  ┌──────────────┐                                          │
+│  │ FAISS Index  │  (Vector Store)                          │
+│  └──────────────┘                                          │
+└─────────────────────────────────────────────────────────────┘
+```
+
+## Upstage SOLAR API 활용
+
+### 1. Embedding API
+```python
+# 문단/청크 임베딩 생성
+embedding = await embedding_service.embed_query("The transformer architecture...")
+# → 4096차원 벡터 반환
+```
+
+### 2. Document Parse API
+```python
+# PDF에서 텍스트 추출
+result = await solar_service.parse_document(pdf_bytes, "paper.pdf")
+# → {"pages": 10, "content": "...", "metadata": {...}}
+```
+
+### 3. Information Extraction API
+```python
+# 인용 정보 추출
+citations = await solar_service.extract_information(text, "citation")
+# → {"title": "...", "authors": [...], "year": 2024}
+```
 
 ## Quick Start
 
 ### Prerequisites
-
-- [uv](https://docs.astral.sh/uv/) (Python package manager)
-- [Docker](https://www.docker.com/) & Docker Compose
-- [Node.js](https://nodejs.org/) 18+
+- Python 3.11+
+- [uv](https://docs.astral.sh/uv/) (패키지 매니저)
+- Docker & Docker Compose
 - [Upstage API Key](https://console.upstage.ai/)
 
-### 1. Clone & Setup
+### 1. Setup
 
 ```bash
-git clone --recursive https://github.com/yourusername/my-awesome-ra.git
+# Clone
+git clone --recursive https://github.com/GoBeromsu/my-awesome-ra.git
 cd my-awesome-ra
 
-# Copy environment template
+# Environment
 cp .env.example .env
-# Edit .env and set UPSTAGE_API_KEY
+# .env 파일에 UPSTAGE_API_KEY 설정
 
-# Run setup
-./scripts/setup.sh
+# Install dependencies
+cd apps/api && uv sync
 ```
 
-### 2. Run Development Server
+### 2. Run API Server
 
 ```bash
-# API server only
 ./scripts/dev.sh
-
-# Or with Docker (full stack)
-docker-compose -f deployment/docker-compose.dev.yml up
+# → http://localhost:8000
 ```
 
 ### 3. Test API
@@ -43,99 +110,96 @@ docker-compose -f deployment/docker-compose.dev.yml up
 # Health check
 curl http://localhost:8000/health
 
-# Search evidence
+# PDF 파싱
+curl -X POST http://localhost:8000/documents/parse \
+  -F "file=@paper.pdf"
+
+# 문서 인덱싱
+curl -X POST http://localhost:8000/documents/index \
+  -H "Content-Type: application/json" \
+  -d '{"document_id": "paper1", "content": "...", "metadata": {"title": "..."}}'
+
+# Evidence 검색
 curl -X POST http://localhost:8000/evidence/search \
   -H "Content-Type: application/json" \
-  -d '{"query": "neural network architecture"}'
-```
-
-## Features
-
-- **Evidence Search**: Semantic search across indexed reference PDFs
-- **Document Parsing**: PDF parsing via Upstage Document Parse API
-- **Citation Extraction**: Structured citation extraction from text
-- **FAISS Indexing**: Fast vector similarity search
-
-## Architecture
-
-```
-┌─────────────────────────────────────────────────┐
-│                   Browser                        │
-├─────────────────────────────────────────────────┤
-│  Overleaf Web                                   │
-│  ┌──────────┬────────────┬─────────────────┐   │
-│  │ File Tree│   Editor   │ Evidence Panel  │   │
-│  └──────────┴────────────┴─────────────────┘   │
-├─────────────────────────────────────────────────┤
-│  apps/api (FastAPI)     │   Upstage SOLAR API   │
-│  :8000                  │                       │
-│  ├─ /evidence/search    │◀── Embedding API      │
-│  ├─ /documents/parse    │◀── Document Parse     │
-│  └─ /citations/extract  │◀── Info Extraction    │
-├─────────────────────────┴───────────────────────┤
-│         FAISS Index    │    File Cache          │
-└─────────────────────────────────────────────────┘
+  -d '{"query": "attention mechanism in transformers"}'
 ```
 
 ## Project Structure
 
 ```
 my-awesome-ra/
-├── overleaf/              # Overleaf CE (git submodule)
-├── apps/api/              # FastAPI backend
-├── packages/
-│   ├── solar-client/      # SOLAR API wrapper
-│   └── evidence-types/    # Shared TypeScript types
-├── deployment/            # Docker Compose configs
-├── scripts/               # Setup & dev scripts
-└── data/                  # Local data (gitignored)
+├── apps/
+│   └── api/                    # FastAPI Backend
+│       ├── src/
+│       │   ├── main.py         # App entry
+│       │   ├── routers/        # API endpoints
+│       │   ├── services/       # Business logic
+│       │   │   ├── embedding.py    # SOLAR Embedding
+│       │   │   ├── index.py        # FAISS Index
+│       │   │   └── solar.py        # SOLAR APIs
+│       │   └── models/         # Pydantic models
+│       └── pyproject.toml
+│
+├── overleaf/                   # Forked Overleaf CE (submodule)
+│   └── services/web/modules/
+│       └── evidence-panel/     # Evidence Panel Module
+│           ├── frontend/js/
+│           │   ├── components/     # React UI
+│           │   ├── context/        # State management
+│           │   └── hooks/          # Custom hooks
+│           └── index.mjs
+│
+├── deployment/
+│   └── docker-compose.*.yml    # Docker configs
+│
+└── data/                       # Local data (gitignored)
+    └── faiss/                  # Vector index
 ```
 
 ## API Endpoints
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `POST` | `/evidence/search` | Search evidence by query |
-| `POST` | `/documents/parse` | Parse PDF document |
-| `POST` | `/documents/index` | Index document for search |
-| `GET` | `/documents/{id}/chunks` | Get document chunks |
-| `POST` | `/citations/extract` | Extract citations |
 | `GET` | `/health` | Health check |
+| `POST` | `/evidence/search` | Search evidence by query |
+| `POST` | `/documents/parse` | Parse PDF (SOLAR) |
+| `POST` | `/documents/index` | Index document to FAISS |
+| `GET` | `/documents/{id}/chunks` | Get document chunks |
+| `POST` | `/citations/extract` | Extract citation info |
 
-## Configuration
+## Development Status
 
-Environment variables (`.env`):
+### ✅ Completed
+- [x] FastAPI backend with SOLAR API integration
+- [x] FAISS vector index for semantic search
+- [x] Evidence Panel React components
+- [x] CodeMirror paragraph detection extension
+- [x] Dependency injection & proper error handling
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `UPSTAGE_API_KEY` | Yes | Upstage API key |
-| `VECTOR_STORE_PATH` | No | FAISS index path (default: `data/faiss`) |
-| `CHUNK_SIZE` | No | Text chunk size (default: 500) |
-| `CHUNK_OVERLAP` | No | Chunk overlap (default: 100) |
+### 🔄 In Progress
+- [ ] Custom Overleaf Docker build with Evidence Panel
+- [ ] E2E integration testing
 
-## Development
+### 📋 TODO
+- [ ] PDF upload UI in Overleaf
+- [ ] BibTeX parsing for citation metadata
+- [ ] Caching for repeated searches
 
-```bash
-# Run tests
-cd apps/api && uv run pytest
+## Tech Stack
 
-# Type check
-cd apps/api && uv run mypy src
-
-# Lint
-cd apps/api && uv run ruff check src
-```
+| Layer | Technology |
+|-------|------------|
+| **AI/ML** | Upstage SOLAR (Embedding, Document Parse, IE) |
+| **Backend** | FastAPI, FAISS, Python 3.11 |
+| **Frontend** | React, TypeScript, CodeMirror 6 |
+| **Editor** | Overleaf Community Edition |
+| **Infra** | Docker, uv |
 
 ## License
 
-This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**.
+AGPL-3.0 (Overleaf CE 호환)
 
-This license is required because the project integrates with [Overleaf Community Edition](https://github.com/overleaf/overleaf), which is licensed under AGPL-3.0. Any modifications or derivative works that interact with Overleaf must also be released under AGPL-3.0.
+---
 
-See [LICENSE](LICENSE) for the full license text.
-
-## Acknowledgments
-
-- [Overleaf](https://www.overleaf.com/) - LaTeX editor
-- [Upstage](https://www.upstage.ai/) - SOLAR API
-- [FAISS](https://github.com/facebookresearch/faiss) - Vector search
+**Upstage AI 2기 홍보대사** | [GoBeromsu](https://github.com/GoBeromsu)

@@ -23,7 +23,7 @@ class SolarService:
             self._client = httpx.AsyncClient(
                 base_url=self.base_url,
                 headers={"Authorization": f"Bearer {self.api_key}"},
-                timeout=60.0,
+                timeout=180.0,  # Increased from 60s for large PDF parsing
             )
         return self._client
 

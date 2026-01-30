@@ -188,3 +188,71 @@ class IndexService:
             for m in self._metadata
             if m["document_id"] == document_id
         ]
+
+    def list_documents(self) -> list[dict[str, Any]]:
+        """
+        List all indexed documents with their metadata.
+
+        Returns:
+            List of document info dictionaries.
+        """
+        documents: dict[str, dict[str, Any]] = {}
+
+        for meta in self._metadata:
+            doc_id = meta["document_id"]
+            if doc_id not in documents:
+                documents[doc_id] = {
+                    "document_id": doc_id,
+                    "title": meta.get("title"),
+                    "authors": meta.get("authors"),
+                    "chunk_count": 0,
+                    "indexed_at": meta.get("indexed_at"),
+                }
+            documents[doc_id]["chunk_count"] += 1
+
+        return list(documents.values())
+
+    def delete_document(self, document_id: str) -> int:
+        """
+        Delete a document and all its chunks from the index.
+
+        Args:
+            document_id: Document identifier to delete.
+
+        Returns:
+            Number of chunks deleted.
+        """
+        if self._index is None:
+            return 0
+
+        # Find indices to keep (not matching document_id)
+        indices_to_keep = [
+            i for i, m in enumerate(self._metadata)
+            if m["document_id"] != document_id
+        ]
+
+        deleted_count = len(self._metadata) - len(indices_to_keep)
+
+        if deleted_count == 0:
+            return 0
+
+        # Rebuild index with only kept vectors
+        if indices_to_keep:
+            # Get vectors for kept indices
+            kept_vectors = np.array([
+                self._index.reconstruct(i) for i in indices_to_keep
+            ])
+            kept_metadata = [self._metadata[i] for i in indices_to_keep]
+
+            # Create new index
+            self._index = faiss.IndexFlatIP(self.dimension)
+            self._index.add(kept_vectors)
+            self._metadata = kept_metadata
+        else:
+            # All documents deleted, create empty index
+            self._index = faiss.IndexFlatIP(self.dimension)
+            self._metadata = []
+
+        self._save_index()
+
+        return deleted_count

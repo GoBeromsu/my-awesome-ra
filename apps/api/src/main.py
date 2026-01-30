@@ -60,8 +60,12 @@ def get_allowed_origins() -> list[str]:
 
     # Always allow localhost for development
     allowed_origins.extend([
+        "http://localhost",           # Overleaf dev server
+        "http://localhost:80",        # Overleaf dev server (explicit)
         "http://localhost:3000",      # React dev server
         "http://localhost:5173",      # Vite dev server
+        "http://127.0.0.1",
+        "http://127.0.0.1:80",
         "http://127.0.0.1:3000",
         "http://127.0.0.1:5173",
     ])
@@ -77,7 +81,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=get_allowed_origins(),
     allow_credentials=False,  # Never allow credentials with CORS
-    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization"],
 )
 

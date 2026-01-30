@@ -48,3 +48,49 @@ class DocumentChunksResponse(BaseModel):
     document_id: str = Field(..., description="Document identifier")
     chunks: list[DocumentChunk] = Field(..., description="List of chunks")
     total: int = Field(..., ge=0, description="Total number of chunks")
+
+
+class DocumentInfo(BaseModel):
+    """Information about an indexed document."""
+
+    document_id: str = Field(..., description="Document identifier")
+    title: str | None = Field(default=None, description="Document title")
+    authors: str | None = Field(default=None, description="Document authors")
+    chunk_count: int = Field(..., ge=0, description="Number of chunks")
+    indexed_at: str | None = Field(default=None, description="Indexing timestamp")
+
+
+class DocumentListResponse(BaseModel):
+    """Response model for document list."""
+
+    documents: list[DocumentInfo] = Field(..., description="List of indexed documents")
+    total: int = Field(..., ge=0, description="Total number of documents")
+
+
+class DocumentDeleteResponse(BaseModel):
+    """Response model for document deletion."""
+
+    document_id: str = Field(..., description="Deleted document identifier")
+    chunks_deleted: int = Field(..., ge=0, description="Number of chunks deleted")
+    status: str = Field(..., description="Deletion status")
+
+
+class DocumentStatusResponse(BaseModel):
+    """Response model for document processing status."""
+
+    document_id: str = Field(..., description="Document identifier")
+    status: str = Field(
+        ..., description="Processing status: processing | indexed | error"
+    )
+    message: str | None = Field(default=None, description="Status message or error")
+    chunk_count: int | None = Field(
+        default=None, ge=0, description="Number of chunks if indexed"
+    )
+
+
+class DocumentUploadResponse(BaseModel):
+    """Response model for document upload (background processing)."""
+
+    document_id: str = Field(..., description="Document identifier")
+    status: str = Field(..., description="Initial status: processing")
+    message: str = Field(..., description="Status message")

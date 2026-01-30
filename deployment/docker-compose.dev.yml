@@ -19,6 +19,75 @@ services:
     networks:
       - dev-network
 
+  # Overleaf CE with Evidence Panel module
+  sharelatex:
+    image: sharelatex/sharelatex:latest
+    container_name: sharelatex
+    depends_on:
+      - mongo
+      - redis
+    ports:
+      - "80:80"
+    environment:
+      # Login disable for demo/development
+      OVERLEAF_ALLOW_PUBLIC_ACCESS: 'true'
+      EMAIL_CONFIRMATION_DISABLED: 'true'
+      OVERLEAF_ALLOW_ANONYMOUS_READ_AND_WRITE_SHARING: 'true'
+
+      # Site configuration
+      OVERLEAF_APP_NAME: 'My Awesome RA Demo'
+      OVERLEAF_SITE_URL: 'http://localhost'
+
+      # MongoDB and Redis
+      SHARELATEX_MONGO_URL: 'mongodb://mongo/sharelatex'
+      SHARELATEX_REDIS_HOST: 'redis'
+
+      # Evidence Panel API integration
+      EVIDENCE_PANEL_API_URL: 'http://ra-api:8000'
+    volumes:
+      - sharelatex_data:/var/lib/sharelatex
+      - ../overleaf/services/web/modules/evidence-panel:/overleaf/services/web/modules/evidence-panel:ro
+    networks:
+      - dev-network
+
+  mongo:
+    image: mongo:5.0
+    container_name: sharelatex-mongo
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - dev-network
+
+  redis:
+    image: redis:7
+    container_name: sharelatex-redis
+    volumes:
+      - redis_data:/data
+    networks:
+      - dev-network
+
+  # Webpack dev server for hot reload (optional)
+  webpack:
+    image: sharelatex/sharelatex:latest
+    container_name: sharelatex-webpack
+    working_dir: /overleaf/services/web
+    command: npm run webpack:dev
+    ports:
+      - "3808:3808"
+    volumes:
+      - ../overleaf/services/web:/overleaf/services/web
+    environment:
+      NODE_ENV: development
+    networks:
+      - dev-network
+    profiles:
+      - dev
+
+volumes:
+  sharelatex_data:
+  mongo_data:
+  redis_data:
+
 networks:
   dev-network:
     driver: bridge

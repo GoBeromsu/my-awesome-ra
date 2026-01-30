@@ -82,6 +82,66 @@ my-awesome-ra/
 docker-compose -f deployment/docker-compose.dev.yml up
 ```
 
+## Overleaf Submodule Development
+
+### Important Rules ⚠️
+
+1. **NEVER run `npm install` on host machine**
+   - Overleaf has complex dependencies that require Docker environment
+   - Running npm on host creates node_modules pollution in wrong locations
+   - Always use Docker containers for all npm operations
+
+2. **Respect the submodule structure**
+   - `overleaf/` is a git submodule pointing to our fork
+   - Branch: `feature/evidence-panel`
+   - Only modify files under `services/web/modules/evidence-panel/`
+
+### Development Workflow (Hot Reload)
+
+```bash
+# Initial build (first time only)
+cd overleaf/develop
+bin/build
+
+# Start development server with hot-reload
+bin/dev web webpack
+
+# Code changes are automatically reflected:
+# - web: Backend code changes → auto-restart via node --watch
+# - webpack: Frontend code changes → auto-build via webpack-dev-server
+```
+
+| Service | Port | Hot Reload Method |
+|---------|------|-------------------|
+| web | 9229 (debug) | `node --watch` |
+| webpack | 80 | webpack-dev-server |
+
+### Running Tests
+
+```bash
+# Run frontend tests inside container
+docker exec develop-web-1 sh -c \
+  "cd /overleaf/services/web && npm run test:frontend -- --grep 'Evidence'"
+```
+
+### Production Build
+
+```bash
+# Build for production (before deployment)
+docker exec develop-web-1 sh -c \
+  "cd /overleaf/services/web && npm run webpack:production"
+```
+
+### File Locations
+
+| Purpose | Path |
+|---------|------|
+| Frontend components | `overleaf/services/web/modules/evidence-panel/frontend/js/` |
+| Frontend tests | `overleaf/services/web/modules/evidence-panel/test/frontend/js/` |
+| Module entry | `overleaf/services/web/modules/evidence-panel/index.mjs` |
+
+---
+
 ## Problem Definition
 
 ### Core Problem
