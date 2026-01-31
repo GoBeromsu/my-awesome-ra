@@ -900,28 +900,223 @@
 // ===== References Tree (File-Tree Pattern) =====
 // Uses Overleaf's file-tree classes directly - minimal overrides needed
 
+// Bullet removal (flex approach)
+ul.references-tree,
 .references-tree {
-  list-style: none;
+  display: flex !important;
+  flex-direction: column !important;
+  list-style: none !important;
   margin: var(--spacing-02);
-  padding: 0;
+  padding: 0 !important;
 
-  // Status icon colors (only custom styles needed)
-  .icon-indexed {
-    color: var(--green-50) !important;
-  }
+  // Reference tree item
+  li.reference-tree-item {
+    display: flex !important;
+    flex-direction: column !important;
+    list-style: none !important;
+    line-height: var(--file-tree-line-height, 2.05);
+    // Item separator
+    border-bottom: 1px solid var(--border-divider, var(--border-color));
 
-  .icon-indexing {
-    color: var(--yellow-50) !important;
-  }
+    &:last-child {
+      border-bottom: none;
+    }
 
-  .icon-error {
-    color: var(--red-50) !important;
+    .entity {
+      display: flex;
+      flex-direction: column;
+      user-select: none;
+    }
+
+    .entity-name {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      padding: var(--spacing-02) var(--spacing-02);
+      border-radius: var(--border-radius-base);
+      color: var(--content-primary);
+      gap: var(--spacing-02);
+
+      &:hover {
+        background-color: var(--file-tree-item-hover-bg);
+      }
+    }
+
+    .file-tree-entity-details {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-02);
+      flex: 1;
+      min-width: 0;
+    }
+
+    .file-tree-icon {
+      flex-shrink: 0;
+    }
+
+    .item-name-button {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+
+      span {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    }
+
+    // Status icons inline with name
+    .reference-status-icons {
+      flex-shrink: 0;
+      margin-left: var(--spacing-02);
+    }
+
+    // Selected state
+    &.selected .entity-name {
+      background-color: var(--file-tree-item-selected-bg);
+      color: var(--file-tree-item-selected-color);
+      font-weight: 600;
+    }
   }
 }
 
 // Icon spin animation
 .icon-spin {
   animation: spin 1s linear infinite;
+}
+
+// ===== Reference Status Icons (inline) =====
+
+.reference-status-icons {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-02);
+  flex-shrink: 0;
+}
+
+.status-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: default;
+  // Match OLIconButton size="sm" dimensions exactly
+  width: 26px;
+  height: 26px;
+  border-radius: var(--border-radius-base);
+
+  .material-symbols {
+    font-size: 18px;
+  }
+
+  // Color variants
+  &--success {
+    color: var(--green-50);
+  }
+
+  &--warning {
+    color: var(--yellow-60);
+  }
+
+  &--danger {
+    color: var(--red-50);
+  }
+
+  &--muted {
+    color: var(--content-disabled);
+  }
+}
+
+// Legacy badge styles (kept for compatibility)
+.reference-badges {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  flex-wrap: nowrap;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.ref-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 4px;
+  font-size: 9px;
+  border-radius: 3px;
+  font-weight: 500;
+  white-space: nowrap;
+  line-height: 1.2;
+
+  &--success {
+    background: var(--green-10);
+    color: var(--green-60);
+  }
+
+  &--warning {
+    background: var(--yellow-10);
+    color: var(--yellow-70);
+  }
+
+  &--danger {
+    background: var(--red-10);
+    color: var(--red-60);
+  }
+
+  &--muted {
+    background: var(--bg-light-tertiary);
+    color: var(--content-disabled);
+  }
+}
+
+// Spinner inside badge
+.ref-badge-spinner {
+  width: 7px;
+  height: 7px;
+  border: 1.5px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+// ===== Reference Action Buttons =====
+
+.reference-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-01);
+
+  // Icon button overrides
+  .icon-button-small {
+    padding: 2px;
+    min-width: 24px;
+    min-height: 24px;
+
+    .material-symbols {
+      font-size: 16px;
+    }
+  }
+
+  // Legacy text button styles
+  .btn {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: var(--border-radius-base);
+  }
+
+  .btn-danger-ghost {
+    color: var(--red-50);
+    border: 1px solid var(--red-30);
+    background: transparent;
+
+    &:hover {
+      background: var(--red-10);
+      border-color: var(--red-40);
+    }
+  }
 }
 
 

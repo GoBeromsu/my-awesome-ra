@@ -1,7 +1,8 @@
 import React, { useCallback } from 'react'
 import classNames from 'classnames'
 import MaterialIcon from '@/shared/components/material-icon'
-import { ReferenceItemMenu } from './reference-item-menu'
+import { ReferenceStatusIcons } from './reference-status-icons'
+import { ReferenceActionButtons } from './reference-action-buttons'
 import {
   ReferencePaper,
   useReferencesPanelContext,
@@ -47,67 +48,46 @@ export const ReferenceTreeItem: React.FC<ReferenceTreeItemProps> = React.memo(
       onRemove?.(paper)
     }, [onRemove, paper])
 
-    // Display name: citeKey only (clean, like file tree)
     const displayName = paper.citeKey
-
-    // Icon based on status
-    const getIcon = () => {
-      if (paper.indexStatus === 'indexed') return 'check_circle'
-      if (paper.indexStatus === 'indexing') return 'sync'
-      if (paper.indexStatus === 'error') return 'error'
-      return 'description' // default file icon
-    }
-
-    const getIconClass = () => {
-      if (paper.indexStatus === 'indexed') return 'icon-indexed'
-      if (paper.indexStatus === 'indexing') return 'icon-indexing'
-      if (paper.indexStatus === 'error') return 'icon-error'
-      return ''
-    }
-
-    // File tree pattern: menu only renders when selected (JSX conditional)
-    const hasMenu = isSelected
 
     return (
       <li
         role="treeitem"
-        className={classNames({ selected: isSelected })}
+        className={classNames('reference-tree-item', { selected: isSelected })}
         aria-selected={isSelected}
         aria-label={displayName}
         tabIndex={0}
       >
         <div className="entity" role="presentation">
+          {/* Single row: Name + Status icons + Action buttons */}
           <div
             className="entity-name entity-name-react"
             role="presentation"
             onClick={handleSelect}
           >
-            {/* Icons + Name area (file-tree-entity-details pattern) */}
             <div className="file-tree-entity-details">
               <MaterialIcon
-                type={getIcon()}
-                className={classNames('file-tree-icon', 'unfilled', getIconClass(), {
-                  'icon-spin': isProcessing,
-                })}
+                type="description"
+                className="file-tree-icon unfilled"
               />
               <div className="item-name-button">
                 <span title={displayName}>{displayName}</span>
               </div>
+              {/* Status icons always visible */}
+              <ReferenceStatusIcons
+                hasPdf={paper.hasPdf}
+                indexStatus={paper.indexStatus}
+              />
             </div>
-
-            {/* Menu - only render when selected (file tree pattern) */}
-            {hasMenu && (
-              <div className="menu-button btn-group">
-                <ReferenceItemMenu
-                  paper={paper}
-                  onIndex={handleIndex}
-                  onReindex={handleReindex}
-                  onRemove={handleRemove}
-                  onUploadPdf={onUploadPdf}
-                  disabled={disabled || isProcessing}
-                />
-              </div>
-            )}
+            {/* Action buttons always visible */}
+            <ReferenceActionButtons
+              paper={paper}
+              onIndex={handleIndex}
+              onReindex={handleReindex}
+              onRemove={handleRemove}
+              onUploadPdf={onUploadPdf}
+              disabled={disabled || isProcessing}
+            />
           </div>
         </div>
       </li>
