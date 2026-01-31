@@ -1055,7 +1055,12 @@ module.exports = {
     referenceSearchSetting: [],
     errorLogsComponents: [],
     referenceIndices: [],
-    railEntries: [],
+    railEntries: [
+      Path.resolve(
+        __dirname,
+        '../modules/evidence-panel/frontend/js/components/references-rail-entry.tsx'
+      ),
+    ],
     railPopovers: [],
   },
 
