@@ -54,8 +54,11 @@ class DocumentInfo(BaseModel):
     """Information about an indexed document."""
 
     document_id: str = Field(..., description="Document identifier")
+    cite_key: str | None = Field(default=None, description="BibTeX cite key")
     title: str | None = Field(default=None, description="Document title")
     authors: str | None = Field(default=None, description="Document authors")
+    year: int | None = Field(default=None, description="Publication year")
+    page_count: int | None = Field(default=None, ge=1, description="Number of pages")
     chunk_count: int = Field(..., ge=0, description="Number of chunks")
     indexed_at: str | None = Field(default=None, description="Indexing timestamp")
 

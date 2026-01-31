@@ -7,8 +7,7 @@ import { DetachedSynctexControl } from '@/features/pdf-preview/components/detach
 import SwitchToEditorButton from '@/features/pdf-preview/components/switch-to-editor-button'
 import PdfHybridLogsButton from '@/features/pdf-preview/components/pdf-hybrid-logs-button'
 import EditorTourLogsTooltip from '../editor-tour/editor-tour-logs-tooltip'
-import MaterialIcon from '@/shared/components/material-icon'
-import OLTooltip from '@/shared/components/ol/ol-tooltip'
+import EvidenceToggleButton from '@modules/evidence-panel/frontend/js/components/evidence-toggle-button'
 
 interface PdfPreviewHybridToolbarProps {
   showEvidence?: boolean
@@ -39,20 +38,11 @@ function PdfPreviewHybridToolbar({
         <PdfHybridLogsButton ref={logsButtonRef} />
         <PdfHybridDownloadButton />
         {onToggleEvidence && (
-          <OLTooltip
-            id="toggle-evidence-tooltip-new"
-            description={showEvidence ? t('show_pdf') : t('show_evidence')}
-            overlayProps={{ placement: 'bottom' }}
-          >
-            <button
-              className={`toolbar-evidence-toggle ${showEvidence ? 'active' : ''}`}
-              onClick={onToggleEvidence}
-              aria-pressed={showEvidence}
-              aria-label={showEvidence ? t('show_pdf') : t('show_evidence')}
-            >
-              {showEvidence ? 'PDF' : 'Cite'}
-            </button>
-          </OLTooltip>
+          <EvidenceToggleButton
+            showEvidence={showEvidence}
+            onToggle={onToggleEvidence}
+            tooltipId="toggle-evidence-tooltip-new"
+          />
         )}
         <EditorTourLogsTooltip target={logsButtonElt} />
       </div>

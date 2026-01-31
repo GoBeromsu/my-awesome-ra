@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 
 from src.dependencies import get_index_service, get_solar_service
@@ -63,8 +63,11 @@ async def list_documents(
         documents=[
             DocumentInfo(
                 document_id=doc["document_id"],
+                cite_key=doc.get("cite_key"),
                 title=doc.get("title"),
                 authors=doc.get("authors"),
+                year=doc.get("year"),
+                page_count=doc.get("page_count"),
                 chunk_count=doc["chunk_count"],
                 indexed_at=doc.get("indexed_at"),
             )
@@ -187,6 +190,7 @@ async def _process_document_in_background(
     filename: str,
     solar_service: SolarService,
     index_service: IndexService,
+    cite_key: str | None = None,
 ) -> None:
     """Background task to parse and index a document."""
     try:
@@ -212,9 +216,10 @@ async def _process_document_in_background(
             document_id=document_id,
             content=parsed["content"],
             metadata={
+                "cite_key": cite_key,
                 "title": filename.rsplit(".", 1)[0],
                 "source_pdf": filename,
-                "pages": parsed["pages"],
+                "page_count": parsed["pages"],
                 "indexed_at": datetime.now(timezone.utc).isoformat(),
                 **parsed.get("metadata", {}),
             },
@@ -269,6 +274,7 @@ async def upload_and_index_document(
     background_tasks: BackgroundTasks,
     solar_service: Annotated[SolarService, Depends(get_solar_service)],
     index_service: Annotated[IndexService, Depends(get_index_service)],
+    cite_key: Annotated[str | None, Form(description="BibTeX cite key")] = None,
 ) -> DocumentUploadResponse:
     """
     Upload a PDF and start background processing.
@@ -302,11 +308,19 @@ async def upload_and_index_document(
                 detail=f"File too large. Maximum size is {MAX_FILE_SIZE // (1024 * 1024)} MB",
             )
 
-        # Generate document_id from filename hash
+        # Generate document_id from cite_key or filename hash
         file_hash = hashlib.sha256(content).hexdigest()[:12]
-        # Sanitize filename for document ID
-        safe_name = re.sub(r"[^\w\-\.]", "_", file.filename.rsplit(".", 1)[0])
-        document_id = f"{safe_name}_{file_hash}"
+        if cite_key:
+            # Validate cite_key length
+            if len(cite_key) > 200:
+                raise HTTPException(status_code=400, detail="cite_key too long (max 200)")
+            # Use cite_key as document ID base (citeKey_hash format)
+            safe_key = re.sub(r"[^\w\-\.]", "_", cite_key)
+            document_id = f"{safe_key}_{file_hash}"
+        else:
+            # Fallback: use filename
+            safe_name = re.sub(r"[^\w\-\.]", "_", file.filename.rsplit(".", 1)[0])
+            document_id = f"{safe_name}_{file_hash}"
 
         # Check if already processing or indexed
         if document_id in _document_status:
@@ -338,6 +352,7 @@ async def upload_and_index_document(
             file.filename,
             solar_service,
             index_service,
+            cite_key,
         )
 
         return DocumentUploadResponse(

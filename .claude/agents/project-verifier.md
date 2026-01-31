@@ -2,7 +2,7 @@
 name: project-verifier
 description: Intelligent verification agent for My Awesome RA project. AUTO-INVOKES /code-review, code-simplifier, and /tdd when appropriate. Analyzes code changes and selects optimal verification strategy. Use PROACTIVELY after code modifications. Covers both Backend (FastAPI) and Frontend (Overleaf module).
 model: opus
-tools: ["Read", "Grep", "Glob", "Bash", "Task"]
+tools: ["Read", "Grep", "Glob", "Bash", "Task", "mcp__playwright__browser_navigate", "mcp__playwright__browser_snapshot", "mcp__playwright__browser_take_screenshot", "mcp__playwright__browser_click", "mcp__playwright__browser_type", "mcp__playwright__browser_fill_form", "mcp__playwright__browser_wait_for", "mcp__playwright__browser_close"]
 ---
 
 # Project Verifier (Orchestrator)
@@ -78,8 +78,32 @@ docker exec develop-web-1 sh -c \
   "cd /overleaf/services/web && npm run test:frontend -- --grep 'Evidence'"
 ```
 
-### Visual (Playwright) - Only if CSS/UI changed
-See: verification-validator/references/playwright-patterns.md
+### Visual (MCP Playwright) - Only if CSS/UI changed
+
+Use MCP Playwright tools for browser-based verification:
+
+```
+1. Navigate to app:
+   mcp__playwright__browser_navigate(url="http://localhost:80")
+
+2. Login (if needed):
+   mcp__playwright__browser_snapshot() → find login form refs
+   mcp__playwright__browser_type(ref="...", text="demo@example.com")
+   mcp__playwright__browser_type(ref="...", text="Demo@2024!Secure")
+   mcp__playwright__browser_click(ref="login-button-ref")
+
+3. Navigate to relevant page and take screenshot:
+   mcp__playwright__browser_snapshot() → find project/element refs
+   mcp__playwright__browser_take_screenshot(type="png", filename="verification.png")
+
+4. Cleanup:
+   mcp__playwright__browser_close()
+```
+
+Common verification flows:
+- **PDF toolbar**: Login → Open project → Check PDF preview area
+- **Evidence panel**: Login → Open project → Toggle Cite button → Verify panel
+- **Styling**: Screenshot before/after comparison
 
 ## Step 4: Combined Report
 

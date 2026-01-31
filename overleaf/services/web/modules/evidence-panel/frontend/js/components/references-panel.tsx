@@ -28,6 +28,8 @@ export const ReferencesPanel: React.FC = React.memo(function ReferencesPanel() {
 
   const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  // Track which citeKey we're uploading for (null = general upload)
+  const pendingCiteKeyRef = useRef<string | null>(null)
 
   // Stats
   const indexedCount = papers.filter(p => p.indexStatus === 'indexed').length
@@ -41,6 +43,7 @@ export const ReferencesPanel: React.FC = React.memo(function ReferencesPanel() {
       if (!files || files.length === 0) return
 
       setIsUploading(true)
+      const citeKey = pendingCiteKeyRef.current
 
       for (const file of Array.from(files)) {
         // Validate
@@ -51,10 +54,12 @@ export const ReferencesPanel: React.FC = React.memo(function ReferencesPanel() {
           continue
         }
 
-        await uploadPdf(file)
+        // Pass citeKey if we're uploading for a specific paper
+        await uploadPdf(file, citeKey ?? undefined)
       }
 
       setIsUploading(false)
+      pendingCiteKeyRef.current = null
 
       // Reset input
       if (fileInputRef.current) {
@@ -65,15 +70,17 @@ export const ReferencesPanel: React.FC = React.memo(function ReferencesPanel() {
   )
 
   const handleUploadClick = useCallback(() => {
+    pendingCiteKeyRef.current = null // General upload, no specific citeKey
     fileInputRef.current?.click()
   }, [])
 
   const handleIndex = useCallback(
-    (_paper: ReferencePaper) => {
-      // Trigger file upload for this paper
-      handleUploadClick()
+    (paper: ReferencePaper) => {
+      // Set the citeKey for this paper before triggering file upload
+      pendingCiteKeyRef.current = paper.citeKey
+      fileInputRef.current?.click()
     },
-    [handleUploadClick]
+    []
   )
 
   const handleReindex = useCallback(

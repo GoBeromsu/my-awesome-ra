@@ -21,16 +21,19 @@ def mock_services(mock_embedding_service):
     mock_index = MagicMock()
     mock_index.list_documents = MagicMock(return_value=[
         {
-            "document_id": "test-doc-001",
+            "document_id": "TestDoc2024_a1b2c3d4e5f6",
+            "cite_key": "TestDoc2024",
             "title": "Test Document",
             "authors": "Test Author",
+            "year": 2024,
+            "page_count": 10,
             "chunk_count": 5,
             "indexed_at": "2024-01-01T00:00:00Z",
         }
     ])
     mock_index.get_chunks = AsyncMock(return_value=[
         {
-            "chunk_id": "test-doc-001_0",
+            "chunk_id": "TestDoc2024_a1b2c3d4e5f6_0",
             "text": "Test chunk content",
             "page": 1,
             "start_idx": 0,
@@ -122,7 +125,7 @@ class TestDocumentList:
         assert "documents" in data
         assert "total" in data
         assert data["total"] == 1
-        assert data["documents"][0]["document_id"] == "test-doc-001"
+        assert data["documents"][0]["document_id"] == "TestDoc2024_a1b2c3d4e5f6"
 
     def test_list_documents_includes_metadata(
         self, client: TestClient, mock_services
@@ -145,7 +148,7 @@ class TestDocumentChunks:
         self, client: TestClient, mock_services
     ) -> None:
         """Verify GET /documents/{id}/chunks returns chunks."""
-        response = client.get("/documents/test-doc-001_abc123abc123/chunks")
+        response = client.get("/documents/TestDoc2024_a1b2c3d4e5f6/chunks")
 
         assert response.status_code == 200
         data = response.json()
@@ -157,7 +160,7 @@ class TestDocumentChunks:
         self, client: TestClient, mock_services
     ) -> None:
         """Verify chunks include text and position info."""
-        response = client.get("/documents/test-doc-001_abc123abc123/chunks")
+        response = client.get("/documents/TestDoc2024_a1b2c3d4e5f6/chunks")
 
         chunk = response.json()["chunks"][0]
         assert "text" in chunk
@@ -197,14 +200,24 @@ class TestDocumentIntegration:
         data = response.json()
         assert data["total"] >= 1
 
-        # Should contain seed document
+        # Should contain seed documents with valid ID format
         doc_ids = [d["document_id"] for d in data["documents"]]
-        assert "test-doc-001" in doc_ids
+        # Check that all document IDs match the expected pattern
+        import re
+        pattern = re.compile(r"^[\w\-\.]+_[a-f0-9]{12}$")
+        assert all(pattern.match(doc_id) for doc_id in doc_ids)
 
     def test_get_chunks_with_seed(self, client_with_seed: TestClient) -> None:
         """Verify chunks endpoint works with seed data."""
-        response = client_with_seed.get("/documents/test-doc-001_abc123abc123/chunks")
+        # First get a valid document ID from the list
+        list_response = client_with_seed.get("/documents")
+        assert list_response.status_code == 200
+        docs = list_response.json()["documents"]
+        assert len(docs) > 0
+
+        doc_id = docs[0]["document_id"]
+        response = client_with_seed.get(f"/documents/{doc_id}/chunks")
 
         assert response.status_code == 200
         data = response.json()
-        assert data["document_id"] == "test-doc-001_abc123abc123"
+        assert data["document_id"] == doc_id

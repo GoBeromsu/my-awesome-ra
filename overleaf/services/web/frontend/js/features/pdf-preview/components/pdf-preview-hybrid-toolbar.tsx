@@ -10,8 +10,7 @@ import PdfHybridCodeCheckButton from './pdf-hybrid-code-check-button'
 import PdfOrphanRefreshButton from './pdf-orphan-refresh-button'
 import { DetachedSynctexControl } from './detach-synctex-control'
 import LoadingSpinner from '@/shared/components/loading-spinner'
-import MaterialIcon from '@/shared/components/material-icon'
-import OLTooltip from '@/shared/components/ol/ol-tooltip'
+import EvidenceToggleButton from '@modules/evidence-panel/frontend/js/components/evidence-toggle-button'
 
 const ORPHAN_UI_TIMEOUT_MS = 5000
 
@@ -89,20 +88,10 @@ function PdfPreviewHybridToolbarInner({
         <PdfHybridLogsButton />
         <PdfHybridDownloadButton />
         {onToggleEvidence && (
-          <OLTooltip
-            id="toggle-evidence-tooltip"
-            description={showEvidence ? t('show_pdf') : t('show_evidence')}
-            overlayProps={{ placement: 'bottom' }}
-          >
-            <button
-              className={`toolbar-evidence-toggle ${showEvidence ? 'active' : ''}`}
-              onClick={onToggleEvidence}
-              aria-pressed={showEvidence}
-              aria-label={showEvidence ? t('show_pdf') : t('show_evidence')}
-            >
-              {showEvidence ? 'PDF' : 'Cite'}
-            </button>
-          </OLTooltip>
+          <EvidenceToggleButton
+            showEvidence={showEvidence}
+            onToggle={onToggleEvidence}
+          />
         )}
       </div>
       <div className="toolbar-pdf-right">
@@ -118,23 +107,19 @@ function PdfPreviewHybridToolbarInner({
 function PdfPreviewHybridToolbarOrphanInner() {
   const { t } = useTranslation()
   return (
-    <>
-      <div className="toolbar-pdf-orphan">
-        {t('tab_no_longer_connected')}
-        <PdfOrphanRefreshButton />
-      </div>
-    </>
+    <div className="toolbar-pdf-orphan">
+      {t('tab_no_longer_connected')}
+      <PdfOrphanRefreshButton />
+    </div>
   )
 }
 
 function PdfPreviewHybridToolbarConnectingInner() {
   const { t } = useTranslation()
   return (
-    <>
-      <div className="toolbar-pdf-orphan">
-        <LoadingSpinner size="sm" loadingText={`${t('tab_connecting')}…`} />
-      </div>
-    </>
+    <div className="toolbar-pdf-orphan">
+      <LoadingSpinner size="sm" loadingText={`${t('tab_connecting')}…`} />
+    </div>
   )
 }
 
