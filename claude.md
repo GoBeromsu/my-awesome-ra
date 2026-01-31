@@ -1,155 +1,129 @@
-**Project**: My Awesome RA
-**Purpose**: AI Agent service for reference-grounded LaTeX paper writing
-**License**: AGPL-3.0 (due to Overleaf CE dependency)
+# My Awesome RA
 
-## Core Technologies
-- Upstage SOLAR API (Embedding, Document Parse, Information Extraction)
-- FastAPI + FAISS (Vector search backend)
-- Overleaf CE (LaTeX editor with Evidence Panel module)
+AI service for reference-grounded LaTeX paper writing. AGPL-3.0 license.
 
-## Folder Structure (Fixed)
+## Commands
+
+```bash
+# API server
+cd apps/api && source .venv/bin/activate && uv run uvicorn src.main:app --reload
+
+# Backend tests
+cd apps/api && pytest -v --tb=short
+
+# Overleaf dev (Docker required)
+cd overleaf/develop && bin/dev web webpack
+
+# Frontend tests (inside Docker)
+docker exec develop-web-1 sh -c "cd /overleaf/services/web && npm run test:frontend -- --grep 'Evidence'"
+
+# Webpack status
+docker compose -f overleaf/develop/docker-compose.yml logs webpack --tail 20 | grep -E "compiled|error"
+```
+
+## Credentials
+
+- Demo login: `demo@example.com` / `Demo@2024!Secure`
+
+## Project Structure
 
 ```
 my-awesome-ra/
-├── overleaf/                    # Overleaf CE (git submodule)
-│   └── services/web/modules/
-│       └── evidence-panel/      # Evidence Panel UI module (Phase 3)
-│
-├── apps/
-│   └── api/                     # FastAPI backend
-│       ├── src/
-│       │   ├── main.py          # App entry point
-│       │   ├── routers/         # API endpoints
-│       │   ├── services/        # Business logic
-│       │   └── models/          # Pydantic models
-│       ├── tests/
-│       ├── pyproject.toml       # uv dependencies
-│       └── Dockerfile
-│
+├── apps/api/                    # FastAPI backend (uv, pytest)
+│   ├── src/main.py              # Entry point
+│   ├── src/routers/             # API endpoints
+│   ├── src/services/            # Business logic
+│   └── tests/
 ├── packages/
-│   ├── solar-client/            # SOLAR API Python wrapper
-│   │   ├── solar_client/
-│   │   └── pyproject.toml
-│   │
+│   ├── solar-client/            # SOLAR API wrapper (Python)
 │   └── evidence-types/          # Shared TypeScript types
-│       ├── src/
-│       └── package.json
-│
-├── deployment/
-│   ├── docker-compose.yml       # Production
-│   ├── docker-compose.dev.yml   # Development
-│   └── docker-compose.overleaf.yml
-│
-├── scripts/
-│   ├── setup.sh                 # Project setup
-│   ├── dev.sh                   # Dev server
-│   └── build-module.sh          # Build evidence panel
-│
-├── data/                        # .gitignore (except .gitkeep)
-│   ├── embeddings/
-│   ├── faiss/
-│   └── parsed/
-│
-├── .claude/                     # Claude Code configuration
-├── .env                         # Secrets (gitignored)
-├── .env.example
-├── spec.md                      # MVP specification
-├── context.md                   # Project context
-└── README.md
+├── overleaf/                    # Git submodule (branch: feature/evidence-panel)
+├── deployment/                  # Docker compose files
+└── .claude/                     # Agents, skills, rules
 ```
+
+## Overleaf Structure (Inside Docker)
+
+```
+/overleaf/services/web/
+├── modules/
+│   └── evidence-panel/              # OUR MODULE - only modify here
+│       ├── frontend/js/             # React components
+│       │   ├── components/          # UI components (panels, buttons)
+│       │   ├── hooks/               # Custom React hooks
+│       │   ├── contexts/            # React context providers
+│       │   └── utils/               # Helper functions
+│       ├── test/frontend/js/        # Mocha/Sinon frontend tests
+│       └── index.mjs                # Module registration & routes
+│
+├── frontend/js/
+│   ├── features/                    # @/features - Feature modules
+│   │   ├── ide-redesign/            # New editor UI components
+│   │   ├── pdf-preview/             # PDF viewer components
+│   │   ├── source-editor/           # CodeMirror editor
+│   │   └── outline/                 # Document outline panel
+│   ├── shared/                      # @/shared - Shared utilities
+│   │   ├── components/              # Reusable UI components
+│   │   ├── hooks/                   # Shared React hooks
+│   │   └── context/                 # Global contexts
+│   └── ide/                         # Legacy IDE components
+│
+├── stylesheets/                     # Global SCSS styles
+│   └── app/                         # App-wide styles & variables
+│
+└── locales/
+    └── en.json                      # i18n translation keys
+```
+
+## Critical Rules
+
+### Verification: ALWAYS use `project-verifier` agent
+After ANY code change, delegate to `project-verifier` agent. It auto-selects optimal strategy:
+- Backend only → pytest (~500 tokens)
+- Frontend logic → webpack + tests (~2,000 tokens)
+- CSS/UI → webpack + screenshot (~4,000 tokens)
+- Full flow → Playwright (~10,000 tokens)
+
+NEVER run Playwright manually for every change.
+
+### Overleaf: Docker-only
+- NEVER run `npm install` on host machine
+- ALL npm operations via `docker exec`
+- Only modify: `services/web/modules/evidence-panel/`
+
+### Import paths (Overleaf-specific)
+```typescript
+// Module: @modules (NO slash)
+import { X } from '@modules/evidence-panel/frontend/js/...'
+
+// Feature: @/features (WITH slash)
+import { X } from '@/features/pdf-preview/...'
+
+// Shared: @/shared
+import { X } from '@/shared/...'
+```
+
+### CSS: Use variables only
+```scss
+// CORRECT
+color: var(--content-primary);
+
+// WRONG - will break theming
+color: #333;
+```
+
+## Gotchas
+
+- Webpack success ≠ working UI. Check browser console for runtime errors.
+- Overleaf submodule branch: `feature/evidence-panel`
+- Frontend verification loop: Webpack → Console → Visual (in order)
 
 ## API Endpoints
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/evidence/search` | Search evidence by query |
-| POST | `/documents/parse` | Parse PDF via SOLAR API |
-| POST | `/documents/index` | Index document to FAISS |
-| GET | `/documents/{id}/chunks` | Get document chunks |
-| POST | `/citations/extract` | Extract citation info |
+| POST | `/evidence/search` | Search evidence |
+| POST | `/documents/parse` | Parse PDF (SOLAR API) |
+| POST | `/documents/index` | Index to FAISS |
+| GET | `/documents/{id}/chunks` | Get chunks |
 | GET | `/health` | Health check |
-
-## Development Commands
-
-```bash
-# Setup
-./scripts/setup.sh
-
-# Run API server
-./scripts/dev.sh
-
-# Run with Docker
-docker-compose -f deployment/docker-compose.dev.yml up
-```
-
-## Overleaf Submodule Development
-
-### Important Rules ⚠️
-
-1. **NEVER run `npm install` on host machine**
-   - Overleaf has complex dependencies that require Docker environment
-   - Running npm on host creates node_modules pollution in wrong locations
-   - Always use Docker containers for all npm operations
-
-2. **Respect the submodule structure**
-   - `overleaf/` is a git submodule pointing to our fork
-   - Branch: `feature/evidence-panel`
-   - Only modify files under `services/web/modules/evidence-panel/`
-
-### Development Workflow (Hot Reload)
-
-```bash
-# Initial build (first time only)
-cd overleaf/develop
-bin/build
-
-# Start development server with hot-reload
-bin/dev web webpack
-
-# Code changes are automatically reflected:
-# - web: Backend code changes → auto-restart via node --watch
-# - webpack: Frontend code changes → auto-build via webpack-dev-server
-```
-
-| Service | Port | Hot Reload Method |
-|---------|------|-------------------|
-| web | 9229 (debug) | `node --watch` |
-| webpack | 80 | webpack-dev-server |
-
-### Running Tests
-
-```bash
-# Run frontend tests inside container
-docker exec develop-web-1 sh -c \
-  "cd /overleaf/services/web && npm run test:frontend -- --grep 'Evidence'"
-```
-
-### Production Build
-
-```bash
-# Build for production (before deployment)
-docker exec develop-web-1 sh -c \
-  "cd /overleaf/services/web && npm run webpack:production"
-```
-
-### File Locations
-
-| Purpose | Path |
-|---------|------|
-| Frontend components | `overleaf/services/web/modules/evidence-panel/frontend/js/` |
-| Frontend tests | `overleaf/services/web/modules/evidence-panel/test/frontend/js/` |
-| Module entry | `overleaf/services/web/modules/evidence-panel/index.mjs` |
-
----
-
-## Problem Definition
-
-### Core Problem
-During multi-file LaTeX paper writing, it is difficult to maintain a **low-friction, durable mapping** between:
-- **(a) the claim currently being written** and
-- **(b) the exact evidence span inside reference PDFs that supports it**
-
-### Solution
-Evidence Panel integrated into Overleaf that provides:
-1. **Manual search** (default): User triggers search with selected text
-2. **Auto search** (optional): Automatic context-aware search on cursor move
