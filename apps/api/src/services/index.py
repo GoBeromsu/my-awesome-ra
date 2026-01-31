@@ -25,7 +25,7 @@ class IndexService:
 
         self.chunk_size = int(os.getenv("CHUNK_SIZE", "500"))
         self.chunk_overlap = int(os.getenv("CHUNK_OVERLAP", "100"))
-        self.dimension = 1024  # SOLAR embedding dimension (solar-embedding-1-large)
+        self.dimension = 4096  # SOLAR embedding dimension (solar-embedding-1-large)
 
         self._index: faiss.IndexFlatIP | None = None
         self._metadata: list[dict[str, Any]] = []

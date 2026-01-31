@@ -16,10 +16,13 @@ export const ReferenceStatusIcons: React.FC<ReferenceStatusIconsProps> = ({
 }) => {
   const { t } = useTranslation()
 
+  // Show IndexStatusIcon if hasPdf OR if document is indexed/indexing
+  const showIndexStatus = hasPdf || indexStatus !== 'none'
+
   return (
     <span className="reference-status-icons">
       <PdfStatusIcon hasPdf={hasPdf} t={t} />
-      {hasPdf && <IndexStatusIcon status={indexStatus} t={t} />}
+      {showIndexStatus && <IndexStatusIcon status={indexStatus} t={t} />}
     </span>
   )
 }

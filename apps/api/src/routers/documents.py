@@ -229,10 +229,13 @@ async def _process_document_in_background(
         logger.info(f"Completed processing for {document_id}: {result['chunk_count']} chunks")
 
     except Exception as e:
-        logger.error(f"Error processing {document_id}: {e}")
+        import traceback
+        error_msg = str(e) or repr(e) or "Unknown error"
+        logger.error(f"Error processing {document_id}: {error_msg}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
         _document_status[document_id] = {
             "status": "error",
-            "message": str(e),
+            "message": error_msg,
         }
 
 
