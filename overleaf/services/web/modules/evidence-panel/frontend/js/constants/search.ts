@@ -10,6 +10,18 @@
 export const PARAGRAPH_CHANGE_DEBOUNCE_MS = 500
 
 /**
+ * Minimum query length for search.
+ * Must match backend EvidenceSearchRequest.query min_length=3.
+ */
+export const SEARCH_MIN_QUERY_LENGTH = 3
+
+/**
+ * Maximum query length for search.
+ * Must match backend EvidenceSearchRequest.query max_length=500.
+ */
+export const SEARCH_MAX_QUERY_LENGTH = 500
+
+/**
  * Maximum number of results to return from search.
  * Must match backend EvidenceSearchRequest.top_k max (le=20).
  */

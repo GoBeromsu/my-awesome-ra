@@ -15,7 +15,12 @@ import {
 } from '@/features/source-editor/extensions/evidence-tracker'
 import { useEditorOpenDocContext } from '@/features/ide-react/context/editor-open-doc-context'
 import { EVIDENCE_SHOW_EVENT } from '../constants/events'
-import { SEARCH_TOP_K, SEARCH_THRESHOLD } from '../constants/search'
+import {
+  SEARCH_TOP_K,
+  SEARCH_THRESHOLD,
+  SEARCH_MIN_QUERY_LENGTH,
+  SEARCH_MAX_QUERY_LENGTH,
+} from '../constants/search'
 
 export interface EvidenceResult {
   id: string
@@ -75,7 +80,9 @@ export const EvidenceProvider: FC<EvidenceProviderProps> = ({
 
   const searchEvidence = useCallback(
     async (query: string) => {
-      if (!query.trim()) {
+      let trimmedQuery = query.trim()
+      // Skip search for empty or too short queries (backend requires min_length=3)
+      if (!trimmedQuery || trimmedQuery.length < SEARCH_MIN_QUERY_LENGTH) {
         setSearchState(prev => ({
           ...prev,
           status: 'idle',
@@ -84,6 +91,10 @@ export const EvidenceProvider: FC<EvidenceProviderProps> = ({
           total: 0,
         }))
         return
+      }
+      // Truncate long queries (backend requires max_length=500)
+      if (trimmedQuery.length > SEARCH_MAX_QUERY_LENGTH) {
+        trimmedQuery = trimmedQuery.slice(0, SEARCH_MAX_QUERY_LENGTH)
       }
 
       // Cancel any pending request
@@ -96,7 +107,7 @@ export const EvidenceProvider: FC<EvidenceProviderProps> = ({
       setSearchState(prev => ({
         ...prev,
         status: 'loading',
-        query,
+        query: trimmedQuery,
         error: null,
       }))
 
@@ -107,7 +118,7 @@ export const EvidenceProvider: FC<EvidenceProviderProps> = ({
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            query,
+            query: trimmedQuery,
             top_k: SEARCH_TOP_K,
             threshold: SEARCH_THRESHOLD,
           }),
@@ -150,7 +161,7 @@ export const EvidenceProvider: FC<EvidenceProviderProps> = ({
         setSearchState({
           status: 'success',
           results,
-          query,
+          query: trimmedQuery,
           error: null,
           total: data.total,
         })
