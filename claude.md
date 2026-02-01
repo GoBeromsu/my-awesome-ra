@@ -149,11 +149,25 @@ color: #333;
 
 ## API Endpoints
 
+### Core Endpoints
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/chat/ask` | RAG Q&A with document context |
-| POST | `/evidence/search` | Search evidence |
-| POST | `/documents/parse` | Parse PDF (SOLAR API) |
-| POST | `/documents/index` | Index to FAISS |
-| GET | `/documents/{id}/chunks` | Get chunks |
 | GET | `/health` | Health check |
+| POST | `/evidence/search` | Search evidence by query (embeddings + vector similarity) |
+| POST | `/chat/ask` | RAG Q&A with document context |
+
+### Document Management
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/documents` | List all indexed documents with metadata |
+| POST | `/documents/upload` | Upload PDF → SOLAR Parse → ChromaDB indexing (background) |
+| GET | `/documents/{id}/status` | Check indexing status (processing/indexed/error) |
+| GET | `/documents/{id}/chunks` | Get all chunks for a document |
+| GET | `/documents/{id}/file` | Download original PDF (supports #page=N) |
+| POST | `/documents/{id}/reindex` | Re-parse and re-index existing PDF |
+| DELETE | `/documents/{id}` | Remove document from index and delete PDF |
+
+### Citations
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/citations/extract` | Extract structured citations from text (SOLAR Information Extraction API) |
