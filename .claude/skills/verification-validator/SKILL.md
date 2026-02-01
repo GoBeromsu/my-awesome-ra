@@ -1,84 +1,88 @@
 ---
 name: verification-validator
-description: Smart verification strategies for My Awesome RA. Determines optimal verification approach based on change type. Covers Backend (FastAPI/pytest) and Frontend (Overleaf/Playwright). Use with project-verifier agent or invoke directly after code changes.
+description: Minimal verification based on change type. Backend=pytest, Frontend=webpack, CSS=webpack, Full flow=Playwright.
 ---
 
 # Verification Validator
 
-Smart verification skill that minimizes token usage by selecting the optimal verification strategy based on change type.
+**Principle**: Minimum necessary verification only. No overkill.
+
+## Decision Tree
+
+```
+git diff --name-only HEAD~1
+         │
+         ├─ apps/api/** only ──────────► pytest only (~500 tokens)
+         │
+         ├─ *.tsx only ────────────────► webpack check (~500 tokens)
+         │
+         ├─ *.scss only ───────────────► webpack check (~500 tokens)
+         │
+         ├─ API + Frontend together ───► Full Playwright (~10,000 tokens)
+         │
+         └─ en.json only ──────────────► webpack check (~500 tokens)
+```
+
+## Verification Commands
+
+### Backend Only (apps/api/**)
+```bash
+cd /Users/beomsu/Documents/My\ Awesome\ RA/apps/api
+source .venv/bin/activate && pytest -v --tb=short
+```
+**Done.** No frontend checks needed.
+
+### Frontend Only (*.tsx, *.scss, en.json)
+```bash
+cd /Users/beomsu/Documents/My\ Awesome\ RA/overleaf/develop
+docker compose logs webpack --tail 20 | grep -E "compiled|error"
+```
+**Done.** If "compiled successfully" appears, verification complete.
+
+### Full Flow (API + Frontend Integration)
+Only when BOTH conditions:
+1. Backend API changed (apps/api/**)
+2. Frontend calls that API (evidence-panel components)
+
+Then use Playwright:
+```
+1. browser_navigate → http://localhost/login
+2. browser_snapshot → find form refs
+3. browser_fill_form → login
+4. browser_click → login button
+5. browser_wait_for → {time: 2}
+6. browser_snapshot → verify feature works
+7. browser_close
+```
+
+## What NOT to Do
+
+| Change Type | DO NOT |
+|-------------|--------|
+| Backend only | Run webpack, Playwright |
+| Frontend only | Run pytest, Playwright |
+| CSS only | Run pytest, Playwright, browser tests |
+| i18n only | Run pytest, Playwright |
 
 ## Quick Reference
 
-| Change Type | Verification Steps | Token Cost |
-|-------------|-------------------|------------|
-| Backend API | `pytest` only | ~500 |
-| React logic | Webpack → Unit tests | ~2,000 |
-| CSS/styling | Webpack → Console → Screenshot | ~4,000 |
-| i18n keys | Webpack → Snapshot | ~3,000 |
-| User flow | Full Playwright sequence | ~10,000 |
+| Change | Command | Done? |
+|--------|---------|-------|
+| `apps/api/**` | `pytest -v --tb=short` | Yes |
+| `*.tsx` | `docker compose logs webpack` | Yes |
+| `*.scss` | `docker compose logs webpack` | Yes |
+| `en.json` | `docker compose logs webpack` | Yes |
+| API + Frontend | Playwright sequence | Yes |
 
-## Workflow Integration
+## When to Use Playwright
 
-```
-[Code Change]
-     │
-     ▼
-project-verifier (orchestrator)
-     │
-     ├──► [1] Change Analysis (git diff)
-     │
-     ├──► [2] AUTO: /code-review
-     │
-     ├──► [3] AUTO: code-simplifier (if 50+ new lines)
-     │
-     ├──► [4] AUTO: /tdd (if logic change without tests)
-     │
-     ├──► [5] verification-validator (this skill)
-     │         │
-     │         ├─ Backend? → pytest
-     │         ├─ Frontend logic? → webpack + unit tests
-     │         ├─ Styling? → webpack + screenshot
-     │         └─ User flow? → full Playwright
-     │
-     └──► [6] Combined Report
-```
+**ONLY** when testing user-facing integration:
+- Login flow changes
+- Evidence search API + UI together
+- PDF toolbar + backend API
 
-## Change Detection
-
-```bash
-# Detect change type
-git diff --name-only HEAD~1 | while read file; do
-  case "$file" in
-    apps/api/*) echo "backend" ;;
-    *.tsx)      echo "frontend-logic" ;;
-    *.scss)     echo "styling" ;;
-    */en.json)  echo "i18n" ;;
-  esac
-done | sort -u
-```
-
-## Detailed Strategies
-
-See references:
-- **Strategy selection**: [references/verification-strategies.md](references/verification-strategies.md)
-- **Playwright patterns**: [references/playwright-patterns.md](references/playwright-patterns.md)
-- **Overleaf checks**: [references/overleaf-checks.md](references/overleaf-checks.md)
-
-## Token Optimization Tips
-
-1. **Skip Playwright** for backend-only changes
-2. **Screenshot first** before snapshot (smaller payload)
-3. **Element snapshots** instead of full page
-4. **Batch operations** in single browser session
-5. **Check console without visual** for runtime error detection
-
-## Expected Savings
-
-| Scenario | Before | After | Savings |
-|----------|--------|-------|---------|
-| Backend only | 12,000 | 800 | 93% |
-| Frontend logic | 12,000 | 3,000 | 75% |
-| Styling change | 12,000 | 5,000 | 58% |
-| Full user flow | 12,000 | 12,000 | 0% |
-
-**Average savings**: ~60-70% token reduction
+**NEVER** for:
+- Backend-only changes
+- Component logic changes
+- Styling changes
+- Translation changes
