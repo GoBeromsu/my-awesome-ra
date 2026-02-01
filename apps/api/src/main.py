@@ -6,10 +6,9 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.routers import chat, citations, documents, evidence, feedback
+from src.routers import chat, citations, documents, evidence
 from src.services.chat import ChatService
 from src.services.embedding import EmbeddingService
-from src.services.feedback import FeedbackService
 from src.services.index import IndexService
 from src.services.solar import SolarService
 
@@ -27,13 +26,6 @@ async def lifespan(app: FastAPI):
     index_service = IndexService(embedding_service=embedding_service)
     solar_service = SolarService()
 
-    # Create feedback service with required dependencies
-    feedback_service = FeedbackService(
-        solar_service=solar_service,
-        embedding_service=embedding_service,
-        index_service=index_service,
-    )
-
     # Create chat service for RAG-based Q&A
     chat_service = ChatService(
         solar_service=solar_service,
@@ -45,7 +37,6 @@ async def lifespan(app: FastAPI):
     app.state.embedding_service = embedding_service
     app.state.index_service = index_service
     app.state.solar_service = solar_service
-    app.state.feedback_service = feedback_service
     app.state.chat_service = chat_service
 
     yield
@@ -106,7 +97,6 @@ app.add_middleware(
 app.include_router(evidence.router, prefix="/evidence", tags=["evidence"])
 app.include_router(documents.router, prefix="/documents", tags=["documents"])
 app.include_router(citations.router, prefix="/citations", tags=["citations"])
-app.include_router(feedback.router, prefix="/feedback", tags=["feedback"])
 app.include_router(chat.router, prefix="/chat", tags=["chat"])
 
 
