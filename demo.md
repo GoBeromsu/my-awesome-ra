@@ -22,8 +22,7 @@ Demo starts with pre-seeded data. The seed ensures a consistent, reproducible de
 | Demo Project | Overleaf DB | Pre-configured LaTeX project with `references.bib` |
 | Source PDFs | `fixtures/papers/` | Original PDF papers |
 | Cite Key Mapping | `fixtures/pdf_citekey_mapping.json` | PDF filename ↔ citeKey mapping |
-| FAISS Index | `fixtures/seed/index.faiss` | Vector embeddings for search |
-| Metadata | `fixtures/seed/metadata.npy` | Chunk metadata (text, page, cite_key) |
+| ChromaDB Index | `fixtures/seed/chroma.sqlite3` + `27eb0fa1-.../` | Vector store with embeddings and metadata |
 | Renamed PDFs | `fixtures/seed/pdfs/` | Same PDFs, renamed to `{document_id}.pdf` for API serving |
 
 ### Seed Architecture
@@ -42,8 +41,8 @@ fixtures/
 │   }
 │
 └── seed/
-    ├── index.faiss                  # FAISS index (cosine similarity)
-    ├── metadata.npy                 # Chunk metadata array
+    ├── chroma.sqlite3               # ChromaDB database
+    ├── 27eb0fa1-.../                # ChromaDB index directory
     └── pdfs/                        # PDFs renamed for API serving
         ├── Vaswani2017Attention_a1b2c3d4e5f6.pdf  # 원본과 동일, 이름만 변경
         └── Fan2023Large_b2c3d4e5f6a7.pdf
@@ -96,10 +95,10 @@ Each chunk in `metadata.npy` contains:
 # 1. Reset Overleaf database with demo user/project
 cd overleaf/develop && bin/seed
 
-# 2. Copy seed FAISS index to API data directory
-mkdir -p apps/api/data/faiss apps/api/data/pdfs
-cp fixtures/seed/index.faiss apps/api/data/faiss/
-cp fixtures/seed/metadata.npy apps/api/data/faiss/
+# 2. Copy seed ChromaDB index to API data directory
+mkdir -p apps/api/data/chroma apps/api/data/pdfs
+cp fixtures/seed/chroma.sqlite3 apps/api/data/chroma/
+cp -r fixtures/seed/27eb0fa1-*/ apps/api/data/chroma/
 
 # 3. Copy seed PDFs to API storage
 cp fixtures/seed/pdfs/*.pdf apps/api/data/pdfs/
@@ -118,8 +117,8 @@ cd apps/api && uv run python ../../scripts/regenerate_seed.py
 # 1. Read fixtures/pdf_citekey_mapping.json for PDF ↔ citeKey mapping
 # 2. Parse all PDFs in fixtures/papers/ using SOLAR API
 # 3. Generate embeddings (4096-dim) using Upstage Embedding API
-# 4. Build FAISS index (IndexFlatIP for cosine similarity)
-# 5. Save to fixtures/seed/ (index.faiss, metadata.npy, pdfs/)
+# 4. Build ChromaDB index (cosine similarity)
+# 5. Save to fixtures/seed/ (chroma.sqlite3, index directory, pdfs/)
 # 6. Validate indexed data against expected schema
 ```
 
@@ -575,6 +574,6 @@ test('My Awesome RA Demo Flow', async ({ page }) => {
 | No references shown | Check `.bib` file exists in project |
 | Upload fails | Verify API server is running on :8000 |
 | Indexing stuck | Check SOLAR API key in `.env` |
-| No evidence results | Verify FAISS index has documents |
+| No evidence results | Verify ChromaDB index has documents (`data/chroma/`) |
 | PDF won't open | Check `data/pdfs/` has the file |
 | Evidence not updating | Check auto-toggle is enabled |
