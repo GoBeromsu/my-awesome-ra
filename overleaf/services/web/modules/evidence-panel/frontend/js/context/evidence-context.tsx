@@ -15,10 +15,7 @@ import {
 } from '@/features/source-editor/extensions/evidence-tracker'
 import { useEditorOpenDocContext } from '@/features/ide-react/context/editor-open-doc-context'
 import { EVIDENCE_SHOW_EVENT } from '../constants/events'
-import {
-  MIN_PARAGRAPH_LENGTH_FOR_SEARCH,
-  MAX_PARAGRAPH_LENGTH_FOR_SEARCH,
-} from '../constants/search'
+import { SEARCH_TOP_K, SEARCH_THRESHOLD } from '../constants/search'
 
 export interface EvidenceResult {
   id: string
@@ -44,8 +41,6 @@ export interface EvidenceSearchState {
 export interface EvidenceContextValue {
   searchState: EvidenceSearchState
   currentParagraph: string
-  autoMode: boolean
-  setAutoMode: (enabled: boolean) => void
   searchEvidence: (query: string) => Promise<void>
   setCurrentParagraph: (paragraph: string) => void
   clearResults: () => void
@@ -75,7 +70,6 @@ export const EvidenceProvider: FC<EvidenceProviderProps> = ({
   const [searchState, setSearchState] =
     useState<EvidenceSearchState>(initialSearchState)
   const [currentParagraph, setCurrentParagraph] = useState<string>('')
-  const [autoMode, setAutoMode] = useState<boolean>(true)
 
   const abortControllerRef = useRef<AbortController | null>(null)
 
@@ -114,8 +108,8 @@ export const EvidenceProvider: FC<EvidenceProviderProps> = ({
           },
           body: JSON.stringify({
             query,
-            top_k: 10,
-            threshold: 0.2,
+            top_k: SEARCH_TOP_K,
+            threshold: SEARCH_THRESHOLD,
           }),
           signal: abortControllerRef.current.signal,
         })
@@ -187,8 +181,6 @@ export const EvidenceProvider: FC<EvidenceProviderProps> = ({
     () => ({
       searchState,
       currentParagraph,
-      autoMode,
-      setAutoMode,
       searchEvidence,
       setCurrentParagraph,
       clearResults,
@@ -196,8 +188,6 @@ export const EvidenceProvider: FC<EvidenceProviderProps> = ({
     [
       searchState,
       currentParagraph,
-      autoMode,
-      setAutoMode,
       searchEvidence,
       setCurrentParagraph,
       clearResults,
@@ -223,7 +213,6 @@ const EvidenceTrackerIntegration: FC = () => {
   const lastParagraphRef = useRef<string>('')
 
   // Extract values from context (with fallbacks for when context is null)
-  const autoMode = context?.autoMode ?? false
   const searchEvidence = context?.searchEvidence
   const setCurrentParagraph = context?.setCurrentParagraph
 
@@ -234,7 +223,7 @@ const EvidenceTrackerIntegration: FC = () => {
 
   const handleParagraphChange = useCallback(
     (event: Event) => {
-      if (!autoMode || !searchEvidence || !setCurrentParagraph) {
+      if (!searchEvidence || !setCurrentParagraph) {
         return
       }
 
@@ -249,19 +238,15 @@ const EvidenceTrackerIntegration: FC = () => {
       lastParagraphRef.current = paragraph
       setCurrentParagraph(paragraph)
 
-      // Trigger search if paragraph is meaningful (not too short or too long)
-      if (
-        paragraph &&
-        paragraph.length >= MIN_PARAGRAPH_LENGTH_FOR_SEARCH &&
-        paragraph.length <= MAX_PARAGRAPH_LENGTH_FOR_SEARCH
-      ) {
+      // Trigger search if paragraph is non-empty
+      if (paragraph) {
         searchEvidence(paragraph)
 
         // Dispatch event to show Evidence view in PDF panel
         window.dispatchEvent(new CustomEvent(EVIDENCE_SHOW_EVENT))
       }
     },
-    [autoMode, searchEvidence, setCurrentParagraph]
+    [searchEvidence, setCurrentParagraph]
   )
 
   useEffect(() => {
@@ -278,13 +263,6 @@ const EvidenceTrackerIntegration: FC = () => {
       )
     }
   }, [handleParagraphChange])
-
-  // Reset last paragraph when auto mode is toggled off
-  useEffect(() => {
-    if (!autoMode) {
-      lastParagraphRef.current = ''
-    }
-  }, [autoMode])
 
   return null
 }
