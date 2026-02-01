@@ -1,9 +1,9 @@
-#!/bin/bash
+#!/bin/sh
 # Setup demo user and project for Overleaf development environment
 
 set -e
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
 # Support both host machine (fixtures/latex) and container (/fixtures/latex) paths
@@ -27,28 +27,29 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
-echo "=================================="
-echo "  My Awesome RA - Demo Setup"
-echo "=================================="
-echo
+printf "==================================\n"
+printf "  My Awesome RA - Demo Setup\n"
+printf "==================================\n\n"
 
 # Wait for web container to be ready
-echo -e "${YELLOW}Waiting for Overleaf web container...${NC}"
-for i in {1..30}; do
-    if docker exec $CONTAINER_NAME echo "ready" >/dev/null 2>&1; then
-        echo -e "${GREEN}Container ready!${NC}"
+printf "%sWaiting for Overleaf web container...%s\n" "$YELLOW" "$NC"
+i=1
+while [ $i -le 30 ]; do
+    if docker exec "$CONTAINER_NAME" echo "ready" >/dev/null 2>&1; then
+        printf "%sContainer ready!%s\n" "$GREEN" "$NC"
         break
     fi
     if [ $i -eq 30 ]; then
-        echo -e "${RED}Error: Container not ready after 60 seconds${NC}"
+        printf "%sError: Container not ready after 60 seconds%s\n" "$RED" "$NC"
         exit 1
     fi
+    i=$((i + 1))
     sleep 2
 done
 
 # Step 1: Create demo user and get user ID
 echo
-echo -e "${YELLOW}Step 1: Creating demo user...${NC}"
+printf "%sStep 1: Creating demo user...%s\n" "$YELLOW" "$NC"
 
 USER_ID=$(docker exec $CONTAINER_NAME sh -c "cd /overleaf/services/web && node --input-type=module -e \"
 import { db } from './app/src/infrastructure/mongodb.mjs';
@@ -103,11 +104,11 @@ if [ -z "$USER_ID" ]; then
     exit 1
 fi
 
-echo -e "${GREEN}Demo user created with ID: $USER_ID${NC}"
+printf "%sDemo user created with ID: %s%s\n" "$GREEN" "$USER_ID" "$NC"
 
 # Step 2: Delete any existing demo projects
 echo
-echo -e "${YELLOW}Step 2: Cleaning up existing demo projects...${NC}"
+printf "%sStep 2: Cleaning up existing demo projects...%s\n" "$YELLOW" "$NC"
 
 docker exec $CONTAINER_NAME sh -c "cd /overleaf/services/web && node --input-type=module -e \"
 import { db } from './app/src/infrastructure/mongodb.mjs';
@@ -129,7 +130,7 @@ cleanupProjects().catch(err => {
 
 # Step 3: Create demo project with fixtures
 echo
-echo -e "${YELLOW}Step 3: Creating demo project...${NC}"
+printf "%sStep 3: Creating demo project...%s\n" "$YELLOW" "$NC"
 
 # Copy fixtures to container
 echo "Copying LaTeX files to container..."
@@ -291,14 +292,14 @@ createDemoProject().catch(err => {
 \"" 2>&1 | tee /dev/stderr | tail -1)
 
 if [ -z "$PROJECT_ID" ] || [ "$PROJECT_ID" = "undefined" ]; then
-    echo -e "${RED}Error: Failed to create demo project${NC}"
+    printf "%sError: Failed to create demo project%s\n" "$RED" "$NC"
     docker exec $CONTAINER_NAME rm -rf /tmp/demo-latex 2>/dev/null || true
     exit 1
 fi
 
 # Step 4: Upload images via HTTP API
 echo
-echo -e "${YELLOW}Step 4: Uploading images via HTTP API...${NC}"
+printf "%sStep 4: Uploading images via HTTP API...%s\n" "$YELLOW" "$NC"
 
 # Get root folder ID
 ROOT_FOLDER_ID=$(docker exec $CONTAINER_NAME sh -c "cd /overleaf/services/web && node --input-type=module -e \"
@@ -322,7 +323,7 @@ curl -s -c \$COOKIE_FILE -b \$COOKIE_FILE \\
     -d '{\"email\":\"$DEMO_EMAIL\",\"password\":\"$DEMO_PASSWORD\"}' >/dev/null
 
 # Upload each image
-for IMG in /tmp/demo-latex/*.png /tmp/demo-latex/*.jpg /tmp/demo-latex/*.jpeg 2>/dev/null; do
+for IMG in /tmp/demo-latex/*.png /tmp/demo-latex/*.jpg /tmp/demo-latex/*.jpeg; do
     if [ -f \"\$IMG\" ]; then
         IMG_NAME=\$(basename \"\$IMG\")
         RESULT=\$(curl -s -b \$COOKIE_FILE \\
@@ -335,7 +336,7 @@ for IMG in /tmp/demo-latex/*.png /tmp/demo-latex/*.jpg /tmp/demo-latex/*.jpeg 2>
             echo \"  Warning: Could not upload \$IMG_NAME\"
         fi
     fi
-done
+done 2>/dev/null
 
 rm -f \$COOKIE_FILE
 "
@@ -344,9 +345,9 @@ rm -f \$COOKIE_FILE
 docker exec $CONTAINER_NAME rm -rf /tmp/demo-latex 2>/dev/null || true
 
 echo
-echo -e "${GREEN}=================================="
-echo "  Demo Setup Complete!"
-echo "==================================${NC}"
+printf "%s==================================\n" "$GREEN"
+printf "  Demo Setup Complete!\n"
+printf "==================================%s\n" "$NC"
 echo
 echo "Login credentials:"
 echo "  Email:    $DEMO_EMAIL"
@@ -355,5 +356,5 @@ echo
 echo "Demo project: $PROJECT_NAME"
 echo "Project ID:   $PROJECT_ID"
 echo
-echo -e "Access Overleaf at: ${GREEN}http://localhost${NC}"
+printf "Access Overleaf at: %shttp://localhost%s\n" "$GREEN" "$NC"
 echo
