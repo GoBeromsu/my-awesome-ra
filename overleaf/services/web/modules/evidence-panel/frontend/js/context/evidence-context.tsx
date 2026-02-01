@@ -13,6 +13,7 @@ import {
   EVIDENCE_PARAGRAPH_CHANGE_EVENT,
   ParagraphChangeDetail,
 } from '@/features/source-editor/extensions/evidence-tracker'
+import { useEditorOpenDocContext } from '@/features/ide-react/context/editor-open-doc-context'
 import { EVIDENCE_SHOW_EVENT } from '../constants/events'
 import {
   MIN_PARAGRAPH_LENGTH_FOR_SEARCH,
@@ -218,15 +219,22 @@ export const EvidenceProvider: FC<EvidenceProviderProps> = ({
  */
 const EvidenceTrackerIntegration: FC = () => {
   const context = useContext(EvidenceContext)
-  if (!context) {
-    return null
-  }
-  const { autoMode, searchEvidence, setCurrentParagraph } = context
+  const { currentDocumentId } = useEditorOpenDocContext()
   const lastParagraphRef = useRef<string>('')
+
+  // Extract values from context (with fallbacks for when context is null)
+  const autoMode = context?.autoMode ?? false
+  const searchEvidence = context?.searchEvidence
+  const setCurrentParagraph = context?.setCurrentParagraph
+
+  // Reset last paragraph when document changes (file switch)
+  useEffect(() => {
+    lastParagraphRef.current = ''
+  }, [currentDocumentId])
 
   const handleParagraphChange = useCallback(
     (event: Event) => {
-      if (!autoMode) {
+      if (!autoMode || !searchEvidence || !setCurrentParagraph) {
         return
       }
 
