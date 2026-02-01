@@ -13,8 +13,9 @@ else
     FIXTURES_DIR="$PROJECT_DIR/fixtures/latex"
 fi
 
-# Use environment variable or default to develop-web-1
-CONTAINER_NAME="${CONTAINER_NAME:-develop-web-1}"
+# Use environment variable or default to overleaf-web (from deployment/docker-compose.yml)
+# For development with overleaf/develop, use: CONTAINER_NAME=develop-web-1 ./setup-demo.sh
+CONTAINER_NAME="${CONTAINER_NAME:-overleaf-web}"
 
 DEMO_EMAIL="demo@example.com"
 DEMO_PASSWORD="Demo@2024!Secure"

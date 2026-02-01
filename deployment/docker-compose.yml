@@ -1,35 +1,132 @@
-version: '3.8'
+# My Awesome RA - One-Command Demo Setup
+# Usage: cd deployment && docker compose up --build
+#
+# Uses overlay build: official sharelatex image + evidence-panel module only
+# Build time: ~5-7 min (vs ~15 min for full Overleaf build)
 
 services:
-  # My Awesome RA API
+  # Overleaf CE with Evidence Panel (overlay build)
+  overleaf-web:
+    build:
+      context: ../overleaf
+      dockerfile: ../deployment/Dockerfile.overleaf
+    container_name: overleaf-web
+    ports:
+      - "80:80"
+    environment:
+      OVERLEAF_MONGO_URL: mongodb://mongo/overleaf?directConnection=true
+      OVERLEAF_REDIS_HOST: redis
+      REDIS_HOST: redis
+      OVERLEAF_APP_NAME: "My Awesome RA Demo"
+      OVERLEAF_SITE_URL: http://localhost
+      EVIDENCE_PANEL_API_URL: http://ra-api:8000
+      EMAIL_CONFIRMATION_DISABLED: "true"
+      OVERLEAF_ALLOW_PUBLIC_ACCESS: "true"
+      OVERLEAF_ALLOW_ANONYMOUS_READ_AND_WRITE_SHARING: "true"
+      ENABLED_LINKED_FILE_TYPES: "project_file,project_output_file"
+      ENABLE_CONVERSIONS: "true"
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      ra-api:
+        condition: service_healthy
+    volumes:
+      - overleaf-data:/var/lib/overleaf
+    networks:
+      - demo-network
+    healthcheck:
+      test: curl --fail http://localhost:3000/status
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+
+  # FastAPI Backend
   ra-api:
     build:
       context: ../apps/api
       dockerfile: Dockerfile
+    container_name: ra-api
     ports:
       - "8000:8000"
     environment:
-      - UPSTAGE_API_KEY=${UPSTAGE_API_KEY}
-      - VECTOR_STORE_PATH=/data/faiss
-      - DATABASE_PATH=/data/my_awesome_ra.db
+      VECTOR_STORE_PATH: /data/chroma
+      PDF_STORAGE_PATH: /data/pdfs
+      DATABASE_PATH: /data/my_awesome_ra.db
+      RESET_TO_SEED: "true"
+      SEED_INDEX_PATH: /seed
+      UPSTAGE_API_KEY: ${UPSTAGE_API_KEY:-}
+      LOG_LEVEL: INFO
     volumes:
-      - ra-data:/data
+      - ../fixtures/seed:/seed:ro
+      - api-data:/data
     networks:
-      - overleaf-network
+      - demo-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  # Overleaf services will be added via overleaf-toolkit
-  # See deployment/overleaf-toolkit/ for configuration
+  # MongoDB 8.0+ (required for Overleaf 5.0+)
+  mongo:
+    image: mongo:8.0
+    container_name: mongo
+    command: --replSet overleaf
+    volumes:
+      - mongo-data:/data/db
+      - ../overleaf/bin/shared/mongodb-init-replica-set.js:/docker-entrypoint-initdb.d/mongodb-init-replica-set.js
+    extra_hosts:
+      - "mongo:127.0.0.1"
+    networks:
+      - demo-network
+    healthcheck:
+      test: echo 'db.stats().ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    volumes:
+      - redis-data:/data
+    networks:
+      - demo-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Demo initialization
+  demo-init:
+    image: docker:cli
+    container_name: demo-init
+    depends_on:
+      overleaf-web:
+        condition: service_healthy
+    volumes:
+      - ../scripts/setup-demo.sh:/setup-demo.sh:ro
+      - ../fixtures/latex:/fixtures/latex:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    entrypoint: ["/bin/sh", "-c", "chmod +x /setup-demo.sh && /setup-demo.sh"]
+    environment:
+      CONTAINER_NAME: overleaf-web
+    networks:
+      - demo-network
+    profiles:
+      - demo
 
 volumes:
-  ra-data:
-    driver: local
+  overleaf-data:
+  api-data:
+  mongo-data:
+  redis-data:
 
 networks:
-  overleaf-network:
-    external: true
-    name: overleaf_default
+  demo-network:
+    driver: bridge

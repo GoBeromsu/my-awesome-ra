@@ -5,14 +5,20 @@ AI service for reference-grounded LaTeX paper writing. AGPL-3.0 license.
 ## Commands
 
 ```bash
-# API server
+# API server (standalone)
 cd apps/api && source .venv/bin/activate && uv run uvicorn src.main:app --reload
 
 # Backend tests
 cd apps/api && pytest -v --tb=short
 
-# Overleaf dev (Docker required)
+# Dev environment (hot reload)
 cd overleaf/develop && bin/dev web webpack
+# → http://localhost (Evidence Panel + live reload)
+
+# Demo environment (production build)
+cd deployment && docker compose up --build
+# Wait ~2 min, then: ../scripts/setup-demo.sh
+# → http://localhost (demo@example.com / Demo@2024!Secure)
 
 # Frontend tests (inside Docker)
 docker exec develop-web-1 sh -c "cd /overleaf/services/web && npm run test:frontend -- --grep 'Evidence'"
@@ -34,11 +40,9 @@ my-awesome-ra/
 │   ├── src/routers/             # API endpoints
 │   ├── src/services/            # Business logic
 │   └── tests/
-├── packages/
-│   ├── solar-client/            # SOLAR API wrapper (Python)
-│   └── evidence-types/          # Shared TypeScript types
-├── overleaf/                    # Git submodule (branch: feature/evidence-panel)
+├── overleaf/                    # Overleaf CE fork (modified for Evidence Panel)
 ├── deployment/                  # Docker compose files
+├── fixtures/                    # Demo data (seed, latex templates)
 └── .claude/                     # Agents, skills, rules
 ```
 
@@ -115,7 +119,6 @@ color: #333;
 ## Gotchas
 
 - Webpack success ≠ working UI. Check browser console for runtime errors.
-- Overleaf submodule branch: `feature/evidence-panel`
 - Frontend verification loop: Webpack → Console → Visual (in order)
 
 ## API Endpoints
