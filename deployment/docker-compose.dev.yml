@@ -48,13 +48,13 @@ services:
       OVERLEAF_SITE_URL: 'http://localhost'
 
       # MongoDB and Redis
-      SHARELATEX_MONGO_URL: 'mongodb://mongo/sharelatex'
-      SHARELATEX_REDIS_HOST: 'redis'
+      OVERLEAF_MONGO_URL: 'mongodb://mongo/overleaf'
+      OVERLEAF_REDIS_HOST: 'redis'
 
       # Evidence Panel API integration
       EVIDENCE_PANEL_API_URL: 'http://ra-api:8000'
     volumes:
-      - sharelatex_data:/var/lib/sharelatex
+      - sharelatex_data:/var/lib/overleaf
       - ../overleaf/services/web/modules/evidence-panel:/overleaf/services/web/modules/evidence-panel:ro
       - ../fixtures/latex:/fixtures/latex:ro
     healthcheck:
@@ -67,7 +67,7 @@ services:
       - dev-network
 
   mongo:
-    image: mongo:5.0
+    image: mongo:8.0
     container_name: sharelatex-mongo
     volumes:
       - mongo_data:/data/db
