@@ -45,6 +45,7 @@ def mock_embedding_service() -> MagicMock:
     Uses a seeded random generator for reproducible results.
     """
     mock = MagicMock()
+    mock.BATCH_SIZE = 5  # Match real EmbeddingService
 
     def generate_embedding(text: str) -> NDArray[np.float32]:
         """Generate deterministic embedding based on text hash."""

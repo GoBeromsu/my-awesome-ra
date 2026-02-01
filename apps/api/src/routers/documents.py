@@ -4,6 +4,7 @@ import hashlib
 import logging
 import os
 import re
+import traceback
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Annotated
@@ -234,8 +235,7 @@ async def _process_document_in_background(
         logger.info(f"Completed processing for {document_id}: {result['chunk_count']} chunks")
 
     except Exception as e:
-        import traceback
-        error_msg = str(e) or repr(e) or "Unknown error"
+        error_msg = str(e) if str(e) else repr(e)
         logger.error(f"Error processing {document_id}: {error_msg}")
         logger.error(f"Traceback: {traceback.format_exc()}")
         _document_status[document_id] = {

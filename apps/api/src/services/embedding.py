@@ -1,7 +1,6 @@
 """Embedding service using SOLAR API."""
 
 import os
-from typing import Any
 
 import httpx
 import numpy as np

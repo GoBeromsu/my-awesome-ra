@@ -3,13 +3,11 @@
 import asyncio
 import logging
 import os
-from typing import Any, Callable, TypeVar
+from typing import Any, Callable
 
 import httpx
 
 logger = logging.getLogger(__name__)
-
-T = TypeVar("T")
 
 
 class SolarService:
